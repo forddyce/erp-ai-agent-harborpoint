@@ -1,33 +1,63 @@
-# Harbor Point Supply Co. — data pack
+# Harbor Point Order Agent
 
-Harbor Point Supply Co. is a fictional B2B distributor of cleaning, paper, glove and takeout supplies. Its customers are restaurants, hotels, schools, clinics and gyms. All companies, people and email addresses are invented; every email domain ends in `.example`.
+An agent-native order-desk assistant for Harbor Point Supply Co. A Gemini agent
+reads the orders inbox, works the ERP **through tools** (customer/product lookups,
+pricing, stock and credit checks), and produces **proposals**. A human ops
+reviewer approves, edits or rejects each proposal before anything commits to the
+ERP. Every tool call and decision is written to an audit log.
 
-This pack is a snapshot of the company's ERP data at **07:00 on Monday 2 November 2026**, plus the order inbox for that day.
+## Stack
 
-## Contents
+- **Agent**: Gemini (`google-genai`, function calling) — default model
+  `gemini-3.5-flash-lite`, override with `GEMINI_MODEL`
+- **Backend/UI**: FastAPI + Jinja2 (server-rendered review UI)
+- **DB**: SQLite (`agent.db`) — ERP tables + emails + proposals + audit_log
+- **Deploy**: GitHub Actions → SSH → VPS (`erp` user, systemd, nginx, Let's Encrypt)
 
-| Path | What it is |
+## Layout
+
+```
+app/
+  ingest.py   # CSVs + .eml files -> agent.db
+  domain.py   # business rules: pricing, credit, stock, order editability
+  tools.py    # read tools + proposal-writing tools exposed to the agent
+  agent.py    # Gemini loop, system prompt, inbox runner
+  server.py   # review UI: inbox, email detail, decisions, audit, orders
+  templates/
+tests/        # unittest suite for the business rules
+deploy/       # systemd unit + nginx vhost
+docs/         # product brief, task breakdown, results, DATA-PACK.md (original spec)
+data/ emails/ # the provided data pack (gitignored — obtained separately)
+```
+
+## Run locally
+
+```bash
+python3 -m venv venv && venv/bin/pip install -r requirements.txt
+echo "GEMINI_API_KEY=..." > .env        # plus optional GEMINI_MODEL
+venv/bin/python -m app.ingest          # load ERP + inbox into agent.db
+venv/bin/python -m app.agent           # process all pending emails
+                                       # (--limit N, --all, --model M)
+venv/bin/uvicorn app.server:app --port 8787
+# open http://127.0.0.1:8787
+```
+
+Tests: `venv/bin/python -m unittest discover -s tests`
+
+## Autonomy boundary
+
+| Agent can do alone | Needs human approval |
 |---|---|
-| `erp.sqlite` | All tables below in one SQLite database (every column stored as TEXT, cast as you need) |
-| `data/customers.csv` | Customers, payment terms, credit limit, open balance, status (`ACTIVE` or `CREDIT_HOLD`) |
-| `data/customer_contacts.csv` | Known contacts and their email addresses |
-| `data/ship_to_addresses.csv` | Delivery addresses; some customers have several |
-| `data/products.csv` | Product catalog, selling unit, pack size, list price, status, replacement SKU |
-| `data/customer_prices.csv` | Customer contract prices with validity dates |
-| `data/inventory.csv` | Stock: `available = on_hand - allocated` |
-| `data/incoming_supply.csv` | Supplier deliveries due in |
-| `data/sales_orders.csv` | Existing sales orders and their status |
-| `data/sales_order_lines.csv` | Lines for those orders, including quantity already shipped |
-| `emails/*.eml` | 40 emails received by orders@harborpointsupply.example on 2 Nov 2026 |
-| `emails.jsonl` | The same 40 emails as JSON lines, if you prefer not to parse .eml |
+| classify emails, look up ERP data | create an order (commits inventory) |
+| draft replies, mark spam/auto-replies | change or cancel any order |
+| flag anything ambiguous for review | send a reply (drafts only — nothing is emailed) |
 
-## Business rules you can rely on
+## Deploy
 
-- Prices are in USD per selling unit (`sell_uom`): `CS` = case, `EA` = each. Only whole selling units can be ordered.
-- A valid contract price (order date within `valid_from`–`valid_to`) overrides the list price; otherwise list price applies.
-- An order should not be released if the customer is on `CREDIT_HOLD`, or if `open_balance` plus the new order's value would exceed `credit_limit`.
-- `DISCONTINUED` products cannot be sold; `replaced_by` names the successor.
-- Orders with status `SHIPPED` cannot be edited. `OPEN` orders can. `PARTIALLY_SHIPPED` orders can only change the unshipped quantity.
-- Allocating stock to a new order reduces `available`.
+Push to `main` → `.github/workflows/deploy.yml` rsyncs the app to
+`/opt/erp-agent` on the VPS and restarts `erp-agent.service`.
+Secrets required in the GitHub repo: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`.
+The `erp` deploy user may only `systemctl restart erp-agent` via sudoers.
 
-Anything not covered here is a product decision for you to make and explain.
+Live: <https://erp.fordgamerprofile.com> (nginx basic auth; credentials shared
+out-of-band).
