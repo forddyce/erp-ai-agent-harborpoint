@@ -114,6 +114,16 @@ class Tools:
         is only created if a human approves the proposal.
         lines: [{"sku": "HPS-XXXX", "qty": N}] in whole selling units."""
         check = domain.validate_order_lines(self.con, customer_id, lines, )
+        if customer_po:
+            dup = self.con.execute(
+                """SELECT proposal_id FROM proposals
+                   WHERE type='create_order' AND status='pending'
+                     AND json_extract(payload,'$.customer_po')=?""",
+                (customer_po,)).fetchone()
+            if dup:
+                check["issues"].append(
+                    f"possible duplicate: pending proposal #{dup[0]} has same PO {customer_po}")
+                check["ok"] = False
         payload = {"customer_id": customer_id, "ship_to_id": ship_to_id,
                    "customer_po": customer_po, "requested_date": requested_date,
                    "lines": check["lines"], "total": check["total"], "check": check}

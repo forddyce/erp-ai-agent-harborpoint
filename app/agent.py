@@ -85,6 +85,18 @@ def process_email(con, email_row, model=GEMINI_MODEL, api_key=None):
     )
     resp = _send_with_retry(chat, prompt)
     summary = (resp.text or "").strip()
+    # safeguard: the agent must always end with a terminal action
+    eid = email_row["email_id"]
+    acted = con.execute(
+        "SELECT 1 FROM proposals WHERE email_id=? LIMIT 1", (eid,)).fetchone() or \
+        con.execute(
+            """SELECT 1 FROM audit_log WHERE email_id=?
+               AND action IN ('flag_for_review','mark_no_action') LIMIT 1""",
+            (eid,)).fetchone()
+    if not acted:
+        tools.flag_for_review(
+            "agent ended without proposing an action — needs manual triage")
+        summary = summary or "(no terminal action — auto-flagged for review)"
     return summary
 
 
