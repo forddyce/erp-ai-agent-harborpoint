@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <title>{% block title %}Harbor Point Order Agent{% endblock %}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: ui-monospace, Menlo, monospace; margin: 0; background: #f5f5f2; color: #222; font-size: 14px; }
+    nav { background: #1d3557; color: #fff; padding: 10px 20px; display: flex; gap: 20px; align-items: baseline; }
+    nav a { color: #cde; text-decoration: none; } nav a:hover { color: #fff; }
+    nav b { font-size: 16px; }
+    main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: top; }
+    th { background: #eee; }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+    .pending { background: #ffe9a8; } .processed { background: #b7e4c7; }
+    .skipped { background: #ddd; } .error { background: #f5b7b1; }
+    .committed { background: #95d5b2; } .rejected { background: #f5b7b1; }
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 14px; margin-bottom: 14px; }
+    pre { white-space: pre-wrap; background: #fafaf7; border: 1px solid #eee; padding: 10px; border-radius: 4px; }
+    .btn { padding: 4px 14px; border: none; border-radius: 4px; cursor: pointer; }
+    .approve { background: #2d6a4f; color: #fff; } .reject { background: #9d0208; color: #fff; }
+    .issue { color: #9d0208; } .muted { color: #888; }
+    a { color: #1d3557; }
+  </style>
+</head>
+<body>
+<nav><b>HP Order Agent</b><a href="/">Inbox</a><a href="/orders">Orders</a><a href="/audit">Audit</a></nav>
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Sales orders (live ERP state)</h2>
+{% for o in orders %}
+<div class="card">
+  <b>{{ o.so_number }}</b> — {{ o.customer_id }} → {{ o.ship_to_id }} ·
+  PO {{ o.customer_po or "—" }} · ordered {{ o.order_date }} · requested {{ o.requested_date }} ·
+  <span class="badge">{{ o.status }}</span>
+  <table>
+    <tr><th>#</th><th>SKU</th><th>Ordered</th><th>Shipped</th><th>Unit $</th></tr>
+    {% for l in o.lines %}
+    <tr><td>{{ l.line_no }}</td><td>{{ l.sku }}</td><td>{{ l.qty_ordered }}</td>
+        <td>{{ l.qty_shipped }}</td><td>{{ l.unit_price }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endfor %}
+{% endblock %}

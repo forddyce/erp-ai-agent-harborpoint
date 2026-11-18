@@ -1,0 +1,15 @@
+[Unit]
+Description=Harbor Point Order Agent (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=erp
+WorkingDirectory=/opt/erp-agent
+EnvironmentFile=/opt/erp-agent/.env
+ExecStart=/opt/erp-agent/venv/bin/uvicorn app.server:app --host 127.0.0.1 --port 8790
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

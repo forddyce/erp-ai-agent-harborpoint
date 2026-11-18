@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Order inbox — Mon 2 Nov 2026</h2>
+<table>
+<tr><th>ID</th><th>From</th><th>Subject</th><th>Status</th><th>Pending proposals</th><th>Agent notes</th></tr>
+{% for e in emails %}
+<tr>
+  <td><a href="/emails/{{ e.email_id }}">{{ e.email_id }}</a></td>
+  <td>{{ e.sender_name or e.sender_email }}</td>
+  <td>{{ e.subject }}</td>
+  <td><span class="badge {{ e.status }}">{{ e.status }}</span>
+      {% if e.classification %}<br><span class="muted">{{ e.classification }}</span>{% endif %}</td>
+  <td>{% if e.n_pending %}<b>{{ e.n_pending }}</b>{% else %}0{% endif %}</td>
+  <td class="muted">{{ (e.agent_notes or "")[:120] }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

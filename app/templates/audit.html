@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Audit log</h2>
+<table>
+<tr><th>#</th><th>Time (UTC)</th><th>Actor</th><th>Action</th><th>Email</th><th>Proposal</th><th>Detail</th></tr>
+{% for r in rows %}
+<tr><td>{{ r.id }}</td><td class="muted">{{ r.ts }}</td><td>{{ r.actor }}</td><td>{{ r.action }}</td>
+    <td>{% if r.email_id %}<a href="/emails/{{ r.email_id }}">{{ r.email_id }}</a>{% endif %}</td>
+    <td>{{ r.proposal_id or "" }}</td>
+    <td class="muted" style="max-width:600px;overflow-wrap:anywhere">{{ (r.detail or "")[:250] }}</td></tr>
+{% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+{% if request.query_params.get("error") %}
+<div class="card" style="border-color:#9d0208"><b class="issue">Commit failed:</b> {{ request.query_params["error"] }}</div>
+{% endif %}
+<div class="card">
+  <h3>{{ e.email_id }} — {{ e.subject }}</h3>
+  <div class="muted">From: {{ e.sender_name }} &lt;{{ e.sender_email }}&gt; · {{ e.date }} ·
+    <span class="badge {{ e.status }}">{{ e.status }}</span></div>
+  <pre>{{ e.body }}</pre>
+  {% if e.agent_notes %}<p><b>Agent summary:</b> {{ e.agent_notes }}</p>{% endif %}
+</div>
+
+{% for p in proposals %}
+<div class="card">
+  <h4>Proposal #{{ p.proposal_id }} — {{ p.type }}
+    <span class="badge {{ p.status }}">{{ p.status }}</span></h4>
+  <p><b>Agent reasoning:</b> {{ p.reason }}</p>
+
+  {% if p.type == "create_order" %}
+    <p>Customer <b>{{ p.payload.customer_id }}</b> → ship-to {{ p.payload.ship_to_id }}
+       · PO {{ p.payload.customer_po or "—" }} · requested {{ p.payload.requested_date or "—" }}
+       · <b>total ${{ p.payload.total }}</b></p>
+    <table>
+      <tr><th>SKU</th><th>Item</th><th>Qty</th><th>Unit $</th><th>Source</th><th>Avail</th><th>Issues</th></tr>
+      {% for l in p.payload.lines %}
+      <tr><td>{{ l.sku }}</td><td>{{ l.name or "?" }}</td><td>{{ l.qty }} {{ l.sell_uom or "" }}</td>
+          <td>{{ l.unit_price }}</td><td>{{ l.price_source or "" }}</td><td>{{ l.available }}</td>
+          <td class="issue">{{ l.issues | join("; ") }}</td></tr>
+      {% endfor %}
+    </table>
+    {% if p.payload.check.issues %}<p class="issue">Checks: {{ p.payload.check.issues | join(" · ") }}</p>{% endif %}
+  {% elif p.type in ("change_order", "cancel_order") %}
+    <p>Order <b>{{ p.payload.so_number }}</b>
+       (status {{ p.payload.current.status }}, rule: {{ p.payload.current.rule }})</p>
+    <pre>{{ p.payload.changes | tojson(indent=1) if p.payload.changes else "full cancellation" }}</pre>
+  {% elif p.type == "reply" %}
+    <p><b>Draft reply{% if p.payload.subject %}: {{ p.payload.subject }}{% endif %}</b></p>
+    <pre>{{ p.payload.body }}</pre>
+  {% endif %}
+
+  {% if p.status == "pending" %}
+  <form method="post" action="/proposals/{{ p.proposal_id }}/decision" style="display:flex;gap:8px;align-items:center">
+    <input name="reviewer" value="ford" size="6">
+    <input name="note" placeholder="note (or JSON edits)" size="40">
+    <button class="btn approve" name="decision" value="approve">Approve &amp; commit</button>
+    <button class="btn" name="decision" value="edited_approve">Approve w/ JSON edits</button>
+    <button class="btn reject" name="decision" value="reject">Reject</button>
+  </form>
+  {% else %}
+    <p class="muted">Decided by {{ p.decided_by }} at {{ p.decided_at }}
+      {% if p.committed_ref %}· committed: {{ p.committed_ref }}{% endif %}
+      {% if p.decision_note %}· {{ p.decision_note }}{% endif %}</p>
+  {% endif %}
+</div>
+{% endfor %}
+
+<div class="card">
+  <h4>Agent trace</h4>
+  <table>
+    <tr><th>#</th><th>Actor</th><th>Action</th><th>Detail</th></tr>
+    {% for l in log %}
+    <tr><td>{{ l.id }}</td><td>{{ l.actor }}</td><td>{{ l.action }}</td>
+        <td class="muted" style="max-width:700px;overflow-wrap:anywhere">{{ (l.detail or "")[:300] }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
