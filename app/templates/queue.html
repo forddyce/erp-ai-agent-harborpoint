@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Review queue — {{ rows | length }} emails need a decision</h2>
+<table>
+<tr><th>Flag</th><th>ID</th><th>From</th><th>Subject</th><th>Pending proposals</th><th>Agent notes</th></tr>
+{% for r in rows %}
+<tr>
+  <td>{% if r.flagged %}<span class="badge error">needs triage</span>{% endif %}</td>
+  <td><a href="/emails/{{ r.email_id }}">{{ r.email_id }}</a></td>
+  <td>{{ r.sender_name or r.sender_email }}</td>
+  <td>{{ r.subject }}</td>
+  <td>{{ r.pending_props or "—" }}</td>
+  <td class="muted">{{ (r.agent_notes or "")[:140] }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

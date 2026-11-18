@@ -105,6 +105,22 @@ def _commit(con, ptype, payload, decision, edited):
     return "ok"
 
 
+@app.get("/queue")
+def queue(request: Request):
+    with get_db() as con:
+        rows = [dict(r) for r in con.execute("""
+            SELECT e.email_id, e.sender_name, e.sender_email, e.subject, e.agent_notes,
+                   GROUP_CONCAT(p.type || ' #' || p.proposal_id) pending_props,
+                   MAX(a.id) IS NOT NULL AS flagged
+            FROM emails e
+            LEFT JOIN proposals p ON p.email_id=e.email_id AND p.status='pending'
+            LEFT JOIN audit_log a ON a.email_id=e.email_id AND a.action='flag_for_review'
+            GROUP BY e.email_id
+            HAVING COUNT(p.proposal_id) > 0 OR flagged
+            ORDER BY flagged DESC, e.email_id""").fetchall()]
+    return templates.TemplateResponse(request, "queue.html", {"rows": rows})
+
+
 @app.get("/audit")
 def audit_view(request: Request):
     with get_db() as con:
